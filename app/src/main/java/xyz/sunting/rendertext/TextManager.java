@@ -15,28 +15,27 @@ public class TextManager {
     private static final float RI_TEXT_WIDTH = 32.0f;
     private static final float RI_TEXT_SPACESIZE = 20f;
 
-    private FloatBuffer vertexBuffer;
-    private FloatBuffer textureBuffer;
-    private FloatBuffer colorBuffer;
-    private ShortBuffer drawListBuffer;
+    private FloatBuffer mVertexBuffer;
+    private FloatBuffer mTexCoordBuffer;
+    private FloatBuffer mColorBuffer;
+    private ShortBuffer mDrawListBuffer;
 
-    private float[] vecs;
-    private float[] uvs;
-    private short[] indices;
-    private float[] colors;
+    private float[] mVertices;
+    private float[] mTexCoords;
+    private short[] mIndices;
+    private float[] mColors;
 
-    private int index_vecs;
-    private int index_indices;
-    private int index_uvs;
-    private int index_colors;
+    private int mVertexIndex;
+    private int mIndiceIndex;
+    private int mTexCoordIndex;
+    private int mColorIndex;
 
-    private int texturenr;
-
-    private float uniformscale;
-
+    private int mTextureId;
     private int mProgram;
 
-    public static int[] l_size = {36, 29, 30, 34, 25, 25, 34, 33,
+    private float mScale;
+
+    public static int[] ALPHABET = {36, 29, 30, 34, 25, 25, 34, 33,
             11, 20, 31, 24, 48, 35, 39, 29,
             42, 31, 27, 31, 34, 35, 46, 35,
             31, 27, 30, 26, 28, 26, 31, 28,
@@ -45,76 +44,65 @@ public class TextManager {
             0, 38, 39, 12, 36, 34, 0, 0,
             0, 38, 0, 0, 0, 0, 0, 0};
 
-    public Vector<TextObject> txtcollection;
+    public Vector<TextObject> mTextObjects;
 
-    public TextManager() {
-        // Create our container
-        txtcollection = new Vector<TextObject>();
+    public TextManager(int textureId) {
+        mTextObjects = new Vector<TextObject>();
 
-        // Create the arrays
-        vecs = new float[3 * 10];
-        colors = new float[4 * 10];
-        uvs = new float[2 * 10];
-        indices = new short[10];
+        mVertices = new float[3 * 10];
+        mColors = new float[4 * 10];
+        mTexCoords = new float[2 * 10];
+        mIndices = new short[10];
 
-        // init as 0 as default
-        texturenr = 0;
-
+        mTextureId = textureId;
         mProgram = ShaderUtil.createProgramFromName("text.vshader", "text.fshader");
     }
 
     public void addText(TextObject obj) {
-        // Add text object to our collection
-        txtcollection.add(obj);
+        mTextObjects.add(obj);
     }
 
-    public void setTextureID(int val) {
-        texturenr = val;
-    }
-
-
-    public void AddCharRenderInformation(float[] vec, float[] cs, float[] uv, short[] indi) {
-        // We need a base value because the object has indices related to
+    public void addCharRenderInfo(float[] vec, float[] cs, float[] uv, short[] indi) {
+        // We need a base value because the object has mIndices related to
         // that object and not to this collection so basicly we need to
-        // translate the indices to align with the vertexlocation in ou
-        // vecs array of vectors.
-        short base = (short) (index_vecs / 3);
+        // translate the mIndices to align with the vertexlocation in ou
+        // mVertices array of vectors.
+        short base = (short) (mVertexIndex / 3);
 
-        // We should add the vec, translating the indices to our saved vector
+        // We should add the vec, translating the mIndices to our saved vector
         for (int i = 0; i < vec.length; i++) {
-            vecs[index_vecs] = vec[i];
-            index_vecs++;
+            mVertices[mVertexIndex] = vec[i];
+            mVertexIndex++;
         }
 
-        // We should add the colors, so we can use the same texture for multiple effects.
+        // We should add the mColors, so we can use the same texture for multiple effects.
         for (int i = 0; i < cs.length; i++) {
-            colors[index_colors] = cs[i];
-            index_colors++;
+            mColors[mColorIndex] = cs[i];
+            mColorIndex++;
         }
 
-        // We should add the uvs
+        // We should add the mTexCoords
         for (int i = 0; i < uv.length; i++) {
-            uvs[index_uvs] = uv[i];
-            index_uvs++;
+            mTexCoords[mTexCoordIndex] = uv[i];
+            mTexCoordIndex++;
         }
 
-        // We handle the indices
+        // We handle the mIndices
         for (int j = 0; j < indi.length; j++) {
-            indices[index_indices] = (short) (base + indi[j]);
-            index_indices++;
+            mIndices[mIndiceIndex] = (short) (base + indi[j]);
+            mIndiceIndex++;
         }
     }
 
-    public void PrepareDrawInfo() {
-        // Reset the indices.
-        index_vecs = 0;
-        index_indices = 0;
-        index_uvs = 0;
-        index_colors = 0;
+    public void prepareDrawInfo() {
+        mVertexIndex = 0;
+        mIndiceIndex = 0;
+        mTexCoordIndex = 0;
+        mColorIndex = 0;
 
         // Get the total amount of characters
         int charcount = 0;
-        for (TextObject txt : txtcollection) {
+        for (TextObject txt : mTextObjects) {
             if (txt != null) {
                 if (!(txt.text == null)) {
                     charcount += txt.text.length();
@@ -123,29 +111,27 @@ public class TextManager {
         }
 
         // Create the arrays we need with the correct size.
-        vecs = null;
-        colors = null;
-        uvs = null;
-        indices = null;
+        mVertices = null;
+        mColors = null;
+        mTexCoords = null;
+        mIndices = null;
 
-        vecs = new float[charcount * 12];
-        colors = new float[charcount * 16];
-        uvs = new float[charcount * 8];
-        indices = new short[charcount * 6];
+        mVertices = new float[charcount * 12];
+        mColors = new float[charcount * 16];
+        mTexCoords = new float[charcount * 8];
+        mIndices = new short[charcount * 6];
 
     }
 
-    public void PrepareDraw() {
+    public void prepareDraw() {
         // Setup all the arrays
-        PrepareDrawInfo();
+        prepareDrawInfo();
 
         // Using the iterator protects for problems with concurrency
-        for (Iterator<TextObject> it = txtcollection.iterator(); it.hasNext(); ) {
+        for (Iterator<TextObject> it = mTextObjects.iterator(); it.hasNext(); ) {
             TextObject txt = it.next();
-            if (txt != null) {
-                if (!(txt.text == null)) {
-                    convertTextToTriangleInfo(txt);
-                }
+            if (txt != null && txt.text != null) {
+                convertTextToTriangleInfo(txt);
             }
         }
     }
@@ -155,32 +141,32 @@ public class TextManager {
         GLES20.glUseProgram(mProgram);
 
         // The vertex buffer.
-        ByteBuffer bb = ByteBuffer.allocateDirect(vecs.length * 4);
+        ByteBuffer bb = ByteBuffer.allocateDirect(mVertices.length * 4);
         bb.order(ByteOrder.nativeOrder());
-        vertexBuffer = bb.asFloatBuffer();
-        vertexBuffer.put(vecs);
-        vertexBuffer.position(0);
+        mVertexBuffer = bb.asFloatBuffer();
+        mVertexBuffer.put(mVertices);
+        mVertexBuffer.position(0);
 
         // The vertex buffer.
-        ByteBuffer bb3 = ByteBuffer.allocateDirect(colors.length * 4);
+        ByteBuffer bb3 = ByteBuffer.allocateDirect(mColors.length * 4);
         bb3.order(ByteOrder.nativeOrder());
-        colorBuffer = bb3.asFloatBuffer();
-        colorBuffer.put(colors);
-        colorBuffer.position(0);
+        mColorBuffer = bb3.asFloatBuffer();
+        mColorBuffer.put(mColors);
+        mColorBuffer.position(0);
 
         // The texture buffer
-        ByteBuffer bb2 = ByteBuffer.allocateDirect(uvs.length * 4);
+        ByteBuffer bb2 = ByteBuffer.allocateDirect(mTexCoords.length * 4);
         bb2.order(ByteOrder.nativeOrder());
-        textureBuffer = bb2.asFloatBuffer();
-        textureBuffer.put(uvs);
-        textureBuffer.position(0);
+        mTexCoordBuffer = bb2.asFloatBuffer();
+        mTexCoordBuffer.put(mTexCoords);
+        mTexCoordBuffer.position(0);
 
         // initialize byte buffer for the draw list
-        ByteBuffer dlb = ByteBuffer.allocateDirect(indices.length * 2);
+        ByteBuffer dlb = ByteBuffer.allocateDirect(mIndices.length * 2);
         dlb.order(ByteOrder.nativeOrder());
-        drawListBuffer = dlb.asShortBuffer();
-        drawListBuffer.put(indices);
-        drawListBuffer.position(0);
+        mDrawListBuffer = dlb.asShortBuffer();
+        mDrawListBuffer.put(mIndices);
+        mDrawListBuffer.position(0);
 
         // get handle to vertex shader's vPosition member
         int mPositionHandle = GLES20.glGetAttribLocation(mProgram, "vPosition");
@@ -191,14 +177,14 @@ public class TextManager {
         // Prepare the background coordinate data
         GLES20.glVertexAttribPointer(mPositionHandle, 3,
                 GLES20.GL_FLOAT, false,
-                0, vertexBuffer);
+                0, mVertexBuffer);
 
         int mTexCoordLoc = GLES20.glGetAttribLocation(mProgram, "a_texCoord");
 
         // Prepare the texturecoordinates
         GLES20.glVertexAttribPointer(mTexCoordLoc, 2, GLES20.GL_FLOAT,
                 false,
-                0, textureBuffer);
+                0, mTexCoordBuffer);
 
         GLES20.glEnableVertexAttribArray(mPositionHandle);
         GLES20.glEnableVertexAttribArray(mTexCoordLoc);
@@ -211,21 +197,18 @@ public class TextManager {
         // Prepare the background coordinate data
         GLES20.glVertexAttribPointer(mColorHandle, 4,
                 GLES20.GL_FLOAT, false,
-                0, colorBuffer);
+                0, mColorBuffer);
 
         // get handle to shape's transformation matrix
         int mtrxhandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
 
-        // Apply the projection and view transformation
         GLES20.glUniformMatrix4fv(mtrxhandle, 1, false, m, 0);
 
-        int mSamplerLoc = GLES20.glGetUniformLocation(mProgram, "s_texture");
-
-        // Set the sampler texture unit to our selected id
-        GLES20.glUniform1i(mSamplerLoc, texturenr);
+        int textureHandle = GLES20.glGetUniformLocation(mProgram, "s_texture");
+        GLES20.glUniform1i(textureHandle, mTextureId);
 
         // Draw the triangle
-        GLES20.glDrawElements(GLES20.GL_TRIANGLES, indices.length, GLES20.GL_UNSIGNED_SHORT, drawListBuffer);
+        GLES20.glDrawElements(GLES20.GL_TRIANGLES, mIndices.length, GLES20.GL_UNSIGNED_SHORT, mDrawListBuffer);
 
         // Disable vertex array
         GLES20.glDisableVertexAttribArray(mPositionHandle);
@@ -234,64 +217,55 @@ public class TextManager {
 
     }
 
-    private int convertCharToIndex(int c_val) {
+    private int convertCharToIndex(int val) {
         int indx = -1;
 
-        // Retrieve the index
-        if (c_val > 64 && c_val < 91) // A-Z
-            indx = c_val - 65;
-        else if (c_val > 96 && c_val < 123) // a-z
-            indx = c_val - 97;
-        else if (c_val > 47 && c_val < 58) // 0-9
-            indx = c_val - 48 + 26;
-        else if (c_val == 43) // +
+        if (val > 64 && val < 91) { // A-Z
+            indx = val - 65;
+        } else if (val > 96 && val < 123) { // a-z
+            indx = val - 97;
+        } else if (val > 47 && val < 58) { // 0-9
+            indx = val - 48 + 26;
+        } else if (val == 43) { // +
             indx = 38;
-        else if (c_val == 45) // -
+        } else if (val == 45) { // -
             indx = 39;
-        else if (c_val == 33) // !
+        } else if (val == 33) { // !
             indx = 36;
-        else if (c_val == 63) // ?
+        } else if (val == 63) { // ?
             indx = 37;
-        else if (c_val == 61) // =
+        } else if (val == 61) { // =
             indx = 40;
-        else if (c_val == 58) // :
+        } else if (val == 58) { // :
             indx = 41;
-        else if (c_val == 46) // .
+        } else if (val == 46) { // .
             indx = 42;
-        else if (c_val == 44) // ,
+        } else if (val == 44) { // ,
             indx = 43;
-        else if (c_val == 42) // *
+        } else if (val == 42) { // *
             indx = 44;
-        else if (c_val == 36) // $
+        } else if (val == 36) { // $
             indx = 45;
+        }
 
         return indx;
     }
 
-
     private void convertTextToTriangleInfo(TextObject val) {
-        // Get attributes from text object
         float x = val.x;
         float y = val.y;
         String text = val.text;
 
-        // Create
         for (int j = 0; j < text.length(); j++) {
-            // get ascii value
-            char c = text.charAt(j);
-            int c_val = (int) c;
+            int index = convertCharToIndex((int) text.charAt(j));
 
-            int indx = convertCharToIndex(c_val);
-
-            if (indx == -1) {
-                // unknown character, we will add a space for it to be save.
-                x += ((RI_TEXT_SPACESIZE) * uniformscale);
+            if (index == -1) {
+                x += (RI_TEXT_SPACESIZE * mScale);
                 continue;
             }
 
-            // Calculate the uv parts
-            int row = indx / 8;
-            int col = indx % 8;
+            int row = index / 8;
+            int col = index % 8;
 
             float v = row * RI_TEXT_UV_BOX_WIDTH;
             float v2 = v + RI_TEXT_UV_BOX_WIDTH;
@@ -301,28 +275,27 @@ public class TextManager {
             // Creating the triangle information
             float[] vec = new float[12];
             float[] uv = new float[8];
-            float[] colors = new float[16];
 
             vec[0] = x;
-            vec[1] = y + (RI_TEXT_WIDTH * uniformscale);
+            vec[1] = y + (RI_TEXT_WIDTH * mScale);
             vec[2] = 0.99f;
             vec[3] = x;
             vec[4] = y;
             vec[5] = 0.99f;
-            vec[6] = x + (RI_TEXT_WIDTH * uniformscale);
+            vec[6] = x + (RI_TEXT_WIDTH * mScale);
             vec[7] = y;
             vec[8] = 0.99f;
-            vec[9] = x + (RI_TEXT_WIDTH * uniformscale);
-            vec[10] = y + (RI_TEXT_WIDTH * uniformscale);
+            vec[9] = x + (RI_TEXT_WIDTH * mScale);
+            vec[10] = y + (RI_TEXT_WIDTH * mScale);
             vec[11] = 0.99f;
 
-            colors = new float[]
-                    {val.color[0], val.color[1], val.color[2], val.color[3],
-                            val.color[0], val.color[1], val.color[2], val.color[3],
-                            val.color[0], val.color[1], val.color[2], val.color[3],
-                            val.color[0], val.color[1], val.color[2], val.color[3]
-                    };
-            // 0.001f = texture bleeding hack/fix
+            float[] colors = new float[] {
+                    val.color[0], val.color[1], val.color[2], val.color[3],
+                    val.color[0], val.color[1], val.color[2], val.color[3],
+                    val.color[0], val.color[1], val.color[2], val.color[3],
+                    val.color[0], val.color[1], val.color[2], val.color[3]
+            };
+
             uv[0] = u + 0.001f;
             uv[1] = v + 0.001f;
             uv[2] = u + 0.001f;
@@ -335,18 +308,18 @@ public class TextManager {
             short[] inds = {0, 1, 2, 0, 2, 3};
 
             // Add our triangle information to our collection for 1 render call.
-            AddCharRenderInformation(vec, colors, uv, inds);
+            addCharRenderInfo(vec, colors, uv, inds);
 
             // Calculate the new position
-            x += ((l_size[indx] / 2) * uniformscale);
+            x += ((ALPHABET[index] / 2) * mScale);
         }
     }
 
-    public float getUniformscale() {
-        return uniformscale;
+    public float getScale() {
+        return mScale;
     }
 
-    public void setUniformscale(float uniformscale) {
-        this.uniformscale = uniformscale;
+    public void setScale(float mScale) {
+        this.mScale = mScale;
     }
 }
